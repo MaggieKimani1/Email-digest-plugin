@@ -1,0 +1,40 @@
+{
+  "applicationName": "API Manifest aaa530a4-fc3f-8be5-8526-e1321b2ff034",
+  "publisher": {
+    "name": "Microsoft Graph",
+    "contactEmail": "graphsdkpub@microsoft.com"
+  },
+  "apiDependencies": {
+    "graph-v1.0-DelegatedWork": {
+      "apiDescriptionUrl": "https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/master/openapi/v1.0/openapi.yaml",
+      "apiDeploymentBaseUrl": "https://graph.microsoft.com/",
+      "apiDescriptionVersion": "v1.0",
+      "auth": {
+        "clientIdentifier": "",
+        "access": [
+          {
+            "type": "openid",
+            "claims": {
+              "scp": {
+                "essential": true,
+                "values": [
+                  "Mail.ReadWrite"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "requests": [
+        {
+          "method": "GET",
+          "uriTemplate": "/me/messages"
+        },
+        {
+          "method": "POST",
+          "uriTemplate": "/me/messages"
+        }
+      ]
+    }
+  }
+}
