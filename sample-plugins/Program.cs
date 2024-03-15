@@ -6,16 +6,19 @@ using Microsoft.SemanticKernel.Plugins.OpenApi.Extensions;
 using Microsoft.Extensions.Logging;
 using sample_plugins;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors.CredentialManagers;
+using Microsoft.Extensions.DependencyInjection;
 
 internal class Program
 {
     private static async Task Main(string[] args)
     {
         var pluginNames = new[] { "MessagesPlugin"/*, "TodoPlugin", "ManagerPlugin"*/ };
-        WriteSampleHeadingToConsole("MessagesPlugin", "meListMessages", new KernelArguments { { "_top", "1" } }, pluginNames);
+        WriteSampleHeadingToConsole("MessagesPlugin", "meListMessages" /*"metodolistsListTasks"*/, new KernelArguments { { "_top", "1" } }, pluginNames);
 
         var config = GetConfiguration();
-        var kernel = InitializeKernel(config);
+        var kernel = args.Length > 0 && args[0] == "--enable-logging" ? InitializeKernel(config, enableLogging: true)
+            : InitializeKernel(config);
+
         await AddApiManifestPluginsAsync(kernel, config, pluginNames);
 
         PrintLine("Please submit your request: ");
@@ -35,7 +38,7 @@ internal class Program
         return configuration;
     }
 
-    static Kernel InitializeKernel(IConfigurationRoot config)
+    static Kernel InitializeKernel(IConfigurationRoot config, bool enableLogging = false)
     {
         var apiKey = config["AzureOpenAI:ApiKey"];
         var chatDeploymentName = config["AzureOpenAI:ChatDeploymentName"];
@@ -47,8 +50,17 @@ internal class Program
             PrintLine("Azure Endpoint, API Key, deployment name or model id not found. Skipping example...");
         }
 
-        return Kernel.CreateBuilder()
-                     .AddAzureOpenAIChatCompletion(chatDeploymentName, endpoint, apiKey, chatModelId)
+        var builder = Kernel.CreateBuilder();
+        if (enableLogging)
+        {
+            builder.Services.AddLogging(loggingBuilder =>
+            {
+                loggingBuilder.AddFilter(level => true);
+                loggingBuilder.AddConsole();
+            });
+        }
+
+        return builder.AddAzureOpenAIChatCompletion(chatDeploymentName, endpoint, apiKey, chatModelId)
                      .Build();
     }
 

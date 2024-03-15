@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "sample-plugins": {
+      "commandName": "Project",
+      "commandLineArgs": "--enable-logging"
+    }
+  }
+}

@@ -29,10 +29,6 @@
         {
           "method": "GET",
           "uriTemplate": "/me/messages"
-        },
-        {
-          "method": "POST",
-          "uriTemplate": "/me/messages"
         }
       ]
     }

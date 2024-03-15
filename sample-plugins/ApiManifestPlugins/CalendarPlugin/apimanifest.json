@@ -1,5 +1,5 @@
 {
-  "applicationName": "API Manifest a8e5cf8a-7fdb-d43c-cc75-2f27e7012db5",
+  "applicationName": "API Manifest 3cded354-76e2-f272-4f94-7a4075352012",
   "publisher": {
     "name": "Microsoft Graph",
     "contactEmail": "graphsdkpub@microsoft.com"
@@ -18,7 +18,7 @@
               "scp": {
                 "essential": true,
                 "values": [
-                  "Tasks.Read"
+                  "Calendars.ReadBasic"
                 ]
               }
             }
@@ -28,7 +28,7 @@
       "requests": [
         {
           "method": "GET",
-          "uriTemplate": "/me/todo/lists"
+          "uriTemplate": "/me/events"
         }
       ]
     }
