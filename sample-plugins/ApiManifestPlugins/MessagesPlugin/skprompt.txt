@@ -1,0 +1,59 @@
+Read the first 10 emails in my inbox and classify them based on urgency. Emails from your manager should be marked as high importance.
+
+Steps:
+1. Access Email Inbox:
+   - Open my email client and navigate to your inbox.
+
+2. Retrieve Emails:
+   - Set up a script or use email filtering options to retrieve the first 10 emails.
+
+3. Email Classification:
+   - For each email:
+     - Check the sender's email address.
+     - If the sender is your manager:
+       - Mark the email as high importance. My manager's email address is `admin@m365x03432055.onmicrosoft.com`
+     - Analyze the subject line and content to determine urgency:
+       - Keywords like "urgent," "deadline," "important," etc., may indicate high priority.
+     - Classify the email into one of the following categories:
+       - High Importance
+       - Medium Importance
+       - Low Importance
+
+4. Prioritization:
+   - Sort the emails into separate folders or categories based on their urgency level:
+     - High Importance: Emails from your manager and those marked urgent.
+     - Medium Importance: Emails requiring attention but not immediate action.
+     - Low Importance: Emails that can be addressed later or are not urgent.
+
+5. Action Plan:
+   - Determine the actions required for each category of emails:
+     - High Importance: Respond or take necessary actions immediately.
+     - Medium Importance: Schedule time to address these emails promptly.
+     - Low Importance: Review and respond as time permits.
+
+6. Follow-Up:
+   - Regularly check and update the email classification and prioritization as new emails arrive.
+
+Once done, generate a report in the following markdown format.
+
+====================================================================================================
+
+# Daily Email Digest - {{date}}
+
+## Urgent Emails:
+1. [Email Subject 1]: Description of the email content and urgency.
+2. [Email Subject 2]: Description of the email content and urgency.
+3. [Email Subject 3]: Description of the email content and urgency.
+
+## High Importance (Manager's Emails):
+1. [Email Subject 1]: Description of the email content and importance.
+2. [Email Subject 2]: Description of the email content and importance.
+
+
+## Todo List:
+- [ ] Follow up with [Sender Name] regarding [Email Subject]: Description of the follow-up task.
+- [ ] Complete [Task Description] from [Email Sender].
+
+====================================================================================================
+
+Replace `{{date}}` with the current date and fill in the email subjects, descriptions, and tasks based on the emails you have received.

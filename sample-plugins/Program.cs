@@ -7,27 +7,23 @@ using Microsoft.Extensions.Logging;
 using sample_plugins;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors.CredentialManagers;
 using Microsoft.Extensions.DependencyInjection;
+using System.Xml.Linq;
 
 internal class Program
 {
+    private static string _pluginName;
+
     private static async Task Main(string[] args)
     {
-        var pluginNames = new[] { "MessagesPlugin"/*, "TodoPlugin", "ManagerPlugin"*/ };
-        WriteSampleHeadingToConsole("MessagesPlugin", "meListMessages" /*"metodolistsListTasks"*/, new KernelArguments { { "_top", "1" } }, pluginNames);
-
+        // Initialize the kernel
         var config = GetConfiguration();
         var kernel = args.Length > 0 && args[0] == "--enable-logging" ? InitializeKernel(config, enableLogging: true)
             : InitializeKernel(config);
 
-        await AddApiManifestPluginsAsync(kernel, config, pluginNames);
-
-        PrintLine("Please submit your request: ");
-        string goal = Console.ReadLine();
-
-        PrintLine($".....Processing your request to {goal}.....");
+        await LoadPluginAsync(kernel, config);
 
         var planner = InitializePlanner();
-        await ExecuteGoal(goal, planner, kernel);
+        await ExecuteGoal(kernel, planner);
     }
 
     static IConfigurationRoot GetConfiguration()
@@ -73,10 +69,14 @@ internal class Program
         };
 
         return new FunctionCallingStepwisePlanner(plannerConfig);
+
     }
 
-    static async Task ExecuteGoal(string goal, FunctionCallingStepwisePlanner planner, Kernel kernel)
+    static async Task ExecuteGoal(Kernel kernel, FunctionCallingStepwisePlanner planner)
     {
+        var promptTemplate = Environment.CurrentDirectory + $"\\ApiManifestPlugins\\{_pluginName}\\skprompt.txt";
+        var goal = File.ReadAllText(promptTemplate);
+
         var result = await planner.ExecuteAsync(kernel, goal);
 
         PrintLine("--------------------");
@@ -84,10 +84,34 @@ internal class Program
         PrintLine("--------------------");
     }
 
-    static async Task AddApiManifestPluginsAsync(Kernel kernel, IConfiguration config, params string[] pluginNames)
+    static async Task AddApiManifestPluginsAsync(Kernel kernel, IConfigurationRoot config)
+    {
+        var authProvider = await GetAuthProviderAsync(config);
+
+        try
+        {
+            var manifestFilePath = Environment.CurrentDirectory + $"\\ApiManifestPlugins\\{_pluginName}\\apimanifest.json";
+            KernelPlugin plugin =
+            await kernel.ImportPluginFromApiManifestAsync(
+                _pluginName,
+                manifestFilePath,
+                new OpenApiFunctionExecutionParameters(authCallback: authProvider.AuthenticateRequestAsync
+                , serverUrlOverride: new Uri("https://graph.microsoft.com/v1.0")))
+                .ConfigureAwait(false);
+
+            PrintLine($">> {_pluginName} is created.", ConsoleColor.Green);
+        }
+        catch (Exception ex)
+        {
+            kernel.LoggerFactory.CreateLogger("Plugin Creation").LogError(ex, "Plugin creation failed. Message: {0}", ex.Message);
+            throw new AggregateException($"Plugin creation failed for {_pluginName}", ex);
+        }
+    }
+
+    static async Task<BearerAuthenticationProviderWithCancellationToken> GetAuthProviderAsync(IConfigurationRoot config)
     {
         var graphScopes = config.GetSection("MSGraph:Scopes").Get<string[]>()
-            ?? throw new InvalidOperationException("Missing Scopes configuration for Microsoft Graph API.");
+    ?? throw new InvalidOperationException("Missing Scopes configuration for Microsoft Graph API.");
 
         LocalUserMSALCredentialManager credentialManager = await LocalUserMSALCredentialManager.CreateAsync().ConfigureAwait(false);
 
@@ -98,39 +122,48 @@ internal class Program
 
         var token = await credentialManager.GetTokenAsync(clientId, tenantId, scopes, redirectUri).ConfigureAwait(false);
         BearerAuthenticationProviderWithCancellationToken authenticationProvider = new(() => Task.FromResult(token));
-
-        foreach (var pluginName in pluginNames)
-        {
-            try
-            {
-                var manifestFilePath = Environment.CurrentDirectory + $"\\ApiManifestPlugins\\{pluginName}\\apimanifest.json";
-                KernelPlugin plugin =
-                await kernel.ImportPluginFromApiManifestAsync(
-                    pluginName,
-                    manifestFilePath,
-                    new OpenApiFunctionExecutionParameters(authCallback: authenticationProvider.AuthenticateRequestAsync
-                    , serverUrlOverride: new Uri("https://graph.microsoft.com/v1.0")))
-                    .ConfigureAwait(false);
-                PrintLine($">> {pluginName} is created.");
-            }
-            catch (Exception ex)
-            {
-                kernel.LoggerFactory.CreateLogger("Plugin Creation").LogError(ex, "Plugin creation failed. Message: {0}", ex.Message);
-                throw new AggregateException($"Plugin creation failed for {pluginName}", ex);
-            }
-        }
+        return authenticationProvider;
     }
 
-    static void WriteSampleHeadingToConsole(string pluginToTest, string functionToTest, KernelArguments? arguments, params string[] pluginsToLoad)
+    static List<string> ListAvailablePlugins()
     {
-        Console.WriteLine();
-        PrintLine("======== [ApiManifest Plugins Sample] ========", ConsoleColor.White);
-        PrintLine($"======== Loading Plugins: {string.Join(" ", pluginsToLoad)} ========", ConsoleColor.White);
-        PrintLine($"======== Calling Plugin Function: {pluginToTest}.{functionToTest} with parameters {arguments?.Select(x => x.Key + " = " + x.Value).Aggregate((x, y) => x + ", " + y)} ========", ConsoleColor.White);
-        Console.WriteLine();
+        // List the plugins available on the console
+        PrintLine("Available Plugins to load:", ConsoleColor.Green);
+        PrintLine("---------------------------", ConsoleColor.Green);
+
+        var pluginIndex = 1;
+        var pluginsList = new List<string>();
+        var availablePlugins = Directory.GetDirectories(Environment.CurrentDirectory + "\\ApiManifestPlugins");
+        foreach (var plugin in availablePlugins)
+        {
+            var pluginName = plugin.Split(Path.DirectorySeparatorChar).Last();
+            PrintLine($"{pluginIndex}. {pluginName}");
+            pluginsList.Add(pluginName);
+            pluginIndex++;
+        }
+
+        PrintLine("---------------------------", ConsoleColor.Green);
+        return pluginsList;
     }
 
-    static void PrintLine(string message, ConsoleColor color = ConsoleColor.Green)
+    static async Task LoadPluginAsync(Kernel kernel, IConfigurationRoot config) 
+    { 
+        var pluginList = ListAvailablePlugins();
+
+        // Select a plugin to load
+        PrintLine("Select a plugin to load: ", ConsoleColor.Green);
+        var selectedIndex = int.Parse(Console.ReadLine());
+        if (selectedIndex > pluginList.Count)
+        {
+            throw new InvalidOperationException("Invalid selection.");
+        }
+
+        var selectedPlugin = pluginList[selectedIndex - 1];
+        _pluginName = selectedPlugin;   
+        await AddApiManifestPluginsAsync(kernel, config);
+    }
+
+    static void PrintLine(string message, ConsoleColor color = ConsoleColor.White)
     {
         Console.ForegroundColor = color;
         Console.WriteLine(message);

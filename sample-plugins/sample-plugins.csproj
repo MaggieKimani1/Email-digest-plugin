@@ -22,6 +22,8 @@
 	
 	<ItemGroup>
 	  <None Remove="apimanifestplugins\calendarplugin\apimanifest.json" />
+	  <None Remove="apimanifestplugins\messagesplugin\Result.md" />
+	  <None Remove="apimanifestplugins\todoplugin\skprompt.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -32,10 +34,24 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="ApiManifestPlugins\MessagesPlugin\" />
 	  <Folder Include="ApiManifestPlugins\ManagerPlugin\" />
 	  <Folder Include="ApiManifestPlugins\CalendarPlugin\" />
 	  <Folder Include="ApiManifestPlugins\TodoPlugin\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Update="ApiManifestPlugins\MessagesPlugin\result.md">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Update="ApiManifestPlugins\MessagesPlugin\skprompt.txt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="ApiManifestPlugins\MessagesPlugin\skprompt.txt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 	
 	<PropertyGroup>

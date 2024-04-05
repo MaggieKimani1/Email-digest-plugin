@@ -1,36 +1,26 @@
 {
-  "applicationName": "API Manifest a8e5cf8a-7fdb-d43c-cc75-2f27e7012db5",
-  "publisher": {
-    "name": "Microsoft Graph",
-    "contactEmail": "graphsdkpub@microsoft.com"
-  },
-  "apiDependencies": {
-    "graph-v1.0-DelegatedWork": {
-      "apiDescriptionUrl": "https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/master/openapi/v1.0/openapi.yaml",
-      "apiDeploymentBaseUrl": "https://graph.microsoft.com/",
-      "apiDescriptionVersion": "v1.0",
-      "auth": {
-        "clientIdentifier": "",
-        "access": [
-          {
-            "type": "openid",
-            "claims": {
-              "scp": {
-                "essential": true,
-                "values": [
-                  "Tasks.Read"
-                ]
-              }
-            }
-          }
-        ]
-      },
-      "requests": [
-        {
-          "method": "GET",
-          "uriTemplate": "/me/todo/lists"
+    "applicationName": "SemanticKernel",
+    "publisher": {
+        "name": "publisher-name",
+        "contactEmail": "publisher-email@example.com"
+    },
+    "apiDependencies": {
+        "microsoft.graph": {
+            "apiDescriptionUrl": "https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/master/openapi/v1.0/graphexplorer.yaml",
+            "requests": [
+                {
+                    "method": "Get",
+                    "uriTemplate": "/me/todo/lists"
+                },
+                {
+                    "method": "Get",
+                    "uriTemplate": "/me/todo/lists/{todoTaskList-id}/tasks"
+                },
+                {
+                    "method": "Post",
+                    "uriTemplate": "/me/todo/lists/{todoTaskList-id}/tasks"
+                }
+            ]
         }
-      ]
     }
-  }
 }
