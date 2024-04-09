@@ -11,18 +11,6 @@
         {
           "method": "GET",
           "uriTemplate": "/me/messages"
-        },
-        {
-          "method": "Get",
-          "uriTemplate": "/me/todo/lists"
-        },
-        {
-          "method": "Get",
-          "uriTemplate": "/me/todo/lists/{todoTaskList-id}/tasks"
-        },
-        {
-          "method": "Post",
-          "uriTemplate": "/me/todo/lists/{todoTaskList-id}/tasks"
         }
       ]
     }

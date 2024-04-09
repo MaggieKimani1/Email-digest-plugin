@@ -4,34 +4,38 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Plugins.OpenApi;
 using Microsoft.SemanticKernel.Plugins.OpenApi.Extensions;
 using Microsoft.Extensions.Logging;
-using sample_plugins;
+//using sample_plugins;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors.CredentialManagers;
 using Microsoft.Extensions.DependencyInjection;
-using System.Xml.Linq;
+using Microsoft.Graph;
+using System.ComponentModel;
+using Azure.Identity;
+using Microsoft.Graph.Models;
+using sample_plugins;
+using sample_plugins.Plugins;
 
 internal class Program
 {
     private static string _pluginName;
+    private static readonly IConfigurationRoot _config = sample_plugins.ConfigurationProvider.GetConfiguration();
+    private static string _clientId = _config.GetSection("MSGraph:ClientId").Get<string>();
+    private static string _tenantId = _config?.GetSection("MSGraph:TenantId").Get<string>();
+    private static string _clientSecret = _config.GetSection("MSGraph:ClientSecret").Get<string>();
 
     private static async Task Main(string[] args)
     {
         // Initialize the kernel
-        var config = GetConfiguration();
-        var kernel = args.Length > 0 && args[0] == "--enable-logging" ? InitializeKernel(config, enableLogging: true)
-            : InitializeKernel(config);
-
-        await LoadPluginAsync(kernel, config);
+        var kernel = args.Length > 0 && args[0] == "--enable-logging" ? InitializeKernel(_config, enableLogging: true)
+            : InitializeKernel(_config);
+        await LoadPluginAsync(kernel, _config);
 
         var planner = InitializePlanner();
-        await ExecuteGoal(kernel, planner);
-    }
+        var report = await ExecuteGoal(kernel, planner);
 
-    static IConfigurationRoot GetConfiguration()
-    {
-        var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
-            .Build();
-        return configuration;
+        await kernel.InvokeAsync<TodoTask>("TaskPlugin", "CreateTaskAsync", new KernelArguments 
+        {
+            {"report", report }
+        });
     }
 
     static Kernel InitializeKernel(IConfigurationRoot config, bool enableLogging = false)
@@ -46,7 +50,8 @@ internal class Program
             PrintLine("Azure Endpoint, API Key, deployment name or model id not found. Skipping example...");
         }
 
-        var builder = Kernel.CreateBuilder();
+        var builder = Kernel.CreateBuilder()
+            .AddAzureOpenAIChatCompletion(chatDeploymentName, endpoint, apiKey, chatModelId);
         if (enableLogging)
         {
             builder.Services.AddLogging(loggingBuilder =>
@@ -56,8 +61,8 @@ internal class Program
             });
         }
 
-        return builder.AddAzureOpenAIChatCompletion(chatDeploymentName, endpoint, apiKey, chatModelId)
-                     .Build();
+        builder.Plugins.AddFromType<TaskPlugin>();
+        return builder.Build();
     }
 
     static FunctionCallingStepwisePlanner InitializePlanner()
@@ -72,7 +77,7 @@ internal class Program
 
     }
 
-    static async Task ExecuteGoal(Kernel kernel, FunctionCallingStepwisePlanner planner)
+    static async Task<string> ExecuteGoal(Kernel kernel, FunctionCallingStepwisePlanner planner)
     {
         var promptTemplate = Environment.CurrentDirectory + $"\\ApiManifestPlugins\\{_pluginName}\\skprompt.txt";
         var goal = File.ReadAllText(promptTemplate);
@@ -82,6 +87,8 @@ internal class Program
         PrintLine("--------------------");
         PrintLine($"\nResult:\n{result.FinalAnswer}\n");
         PrintLine("--------------------");
+
+        return result.FinalAnswer;
     }
 
     static async Task AddApiManifestPluginsAsync(Kernel kernel, IConfigurationRoot config)
@@ -114,13 +121,11 @@ internal class Program
     ?? throw new InvalidOperationException("Missing Scopes configuration for Microsoft Graph API.");
 
         LocalUserMSALCredentialManager credentialManager = await LocalUserMSALCredentialManager.CreateAsync().ConfigureAwait(false);
-
-        var clientId = config.GetSection("MSGraph:ClientId").Get<string>();
-        var tenantId = config.GetSection("MSGraph:TenantId").Get<string>();
+        
         var scopes = config.GetSection("MSGraph:Scopes").Get<string[]>();
         var redirectUri = config.GetSection("MSGraph:RedirectUri").Get<Uri>();
 
-        var token = await credentialManager.GetTokenAsync(clientId, tenantId, scopes, redirectUri).ConfigureAwait(false);
+        var token = await credentialManager.GetTokenAsync(_clientId, _tenantId, scopes, redirectUri).ConfigureAwait(false);
         BearerAuthenticationProviderWithCancellationToken authenticationProvider = new(() => Task.FromResult(token));
         return authenticationProvider;
     }
