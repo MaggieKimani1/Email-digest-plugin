@@ -4,23 +4,18 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Plugins.OpenApi;
 using Microsoft.SemanticKernel.Plugins.OpenApi.Extensions;
 using Microsoft.Extensions.Logging;
-//using sample_plugins;
 using Microsoft.SemanticKernel.Plugins.MsGraph.Connectors.CredentialManagers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Graph;
-using System.ComponentModel;
-using Azure.Identity;
 using Microsoft.Graph.Models;
 using sample_plugins;
 using sample_plugins.Plugins;
 
 internal class Program
 {
-    private static string _pluginName;
+    private static string? _pluginName;
     private static readonly IConfigurationRoot _config = sample_plugins.ConfigurationProvider.GetConfiguration();
-    private static string _clientId = _config.GetSection("MSGraph:ClientId").Get<string>();
-    private static string _tenantId = _config?.GetSection("MSGraph:TenantId").Get<string>();
-    private static string _clientSecret = _config.GetSection("MSGraph:ClientSecret").Get<string>();
+    private static readonly string? _clientId = _config.GetSection("MSGraph:ClientId").Get<string>();
+    private static readonly string? _tenantId = _config?.GetSection("MSGraph:TenantId").Get<string>();
 
     private static async Task Main(string[] args)
     {
@@ -32,7 +27,7 @@ internal class Program
         var planner = InitializePlanner();
         var report = await ExecuteGoal(kernel, planner);
 
-        await kernel.InvokeAsync<TodoTask>("TaskPlugin", "CreateTaskAsync", new KernelArguments 
+        await kernel.InvokeAsync<TodoTask>("TaskPlugin", "CreateTask", new KernelArguments 
         {
             {"report", report }
         });
@@ -40,28 +35,33 @@ internal class Program
 
     static Kernel InitializeKernel(IConfigurationRoot config, bool enableLogging = false)
     {
-        var apiKey = config["AzureOpenAI:ApiKey"];
-        var chatDeploymentName = config["AzureOpenAI:ChatDeploymentName"];
-        var chatModelId = config["AzureOpenAI:ChatModelId"];
-        var endpoint = config["AzureOpenAI:Endpoint"];
+        string? apiKey = config["AzureOpenAI:ApiKey"];
+        string? chatDeploymentName = config["AzureOpenAI:ChatDeploymentName"];
+        string? chatModelId = config["AzureOpenAI:ChatModelId"];
+        string? endpoint = config["AzureOpenAI:Endpoint"];
+
+        var builder = Kernel.CreateBuilder();
 
         if (apiKey == null || chatDeploymentName == null || chatModelId == null || endpoint == null)
         {
             PrintLine("Azure Endpoint, API Key, deployment name or model id not found. Skipping example...");
         }
-
-        var builder = Kernel.CreateBuilder()
-            .AddAzureOpenAIChatCompletion(chatDeploymentName, endpoint, apiKey, chatModelId);
-        if (enableLogging)
+        else
         {
-            builder.Services.AddLogging(loggingBuilder =>
+            builder.AddAzureOpenAIChatCompletion(chatDeploymentName, endpoint, apiKey, chatModelId);
+
+            if (enableLogging)
             {
-                loggingBuilder.AddFilter(level => true);
-                loggingBuilder.AddConsole();
-            });
+                builder.Services.AddLogging(loggingBuilder =>
+                {
+                    loggingBuilder.AddFilter(level => true);
+                    loggingBuilder.AddConsole();
+                });
+            }
+
+            builder.Plugins.AddFromType<TaskPlugin>();
         }
 
-        builder.Plugins.AddFromType<TaskPlugin>();
         return builder.Build();
     }
 
